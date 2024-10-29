@@ -1,0 +1,95 @@
+int pk_type;
+int start;
+int last;
+
+if(dest_num<node_num/2) pk_type=1;
+else pk_type=2;
+
+if(pk_type==1)//½ÚµãÊýÉÙ
+	{
+	//Â·¾¶¹æ»®
+	for(i=0;i<24;i++)
+		for(j=0;j<24;j++)
+			{
+			if(topo[i][j]==1) A[i][j]=1;
+			else A[i][j]=m;
+			}
+	for(i=0;i<24;i++)
+		for(j=0;j<24;j++) add_topo[i][j]=0;
+	
+	for(num=0;num<dest_num;num++)
+		{
+		for(z=0;z<24;z++)
+			for(j=0;j<24;j++) A[z][j]=A[z][j]+add_topo[z][j];
+		start=dest[num];
+		last=interactive_id;
+		Initial();
+		Update(start,last);
+		Output(start,last);
+		for(j=0;j<5;j++) printf("%d###",route[num][j]);
+		
+		for(j=0;j<route_num-1;j++)
+			{
+			add_topo[route[num][j]][route[num][j+1]]=50;
+			add_topo[route[num][j+1]][route[num][j]]=50;
+			}
+		}
+	//Ê±Ï¶¹æ»®---ÓÅÏÈË³Ðò°²ÅÅ
+	//Ã»ÓÐÉÏÒ»Ìø£¬´Ó0¿ªÊ¼ÅÐ£»ÓÐÉÏÒ»Ìø£¬´ÓÉÏÒ»Ìø½áÊø¿ªÊ¼ÅÐ;Â·¾¶ºÅÖð²½·ÖÅä¼´¿É
+	for (i = 0; i < dest_num; ++i)
+		{
+        for (j = 0; j <node_num; ++j)
+			{
+            slot_assignment[i][j] = -1;
+			}
+		}
+	assign_slots();
+	
+	for(i=0;i<dest_num;i++)
+		for(j=0;j<24;j++) if(slot_assignment[i][j]!=-1) slot_appoint_over[i][route[i][j]][slot_assignment[i][j]]=1;
+	else slot_appoint_over[i][route[i][j]][slot_assignment[i][j]]=0;
+	//test
+	for (i = 0; i < dest_num; ++i)
+		{
+        printf("Path %d: ", i);
+        for ( j = 0; j < 24; ++j) 
+			{
+            printf("%d ", slot_assignment[i][j]);
+			}
+        printf("\n");
+		}
+	
+	//×°°ü
+	for(i=0;i<dest_num;i++)
+		{
+		pkptr=op_pk_create_fmt("appoint1");
+		op_pk_nfd_set(pkptr,"SEND",my_address);
+		op_pk_nfd_set(pkptr,"TYPE",0x20);
+		op_pk_nfd_set(pkptr,"Dest_num",dest_num);
+		op_pk_nfd_set(pkptr,"Pk_type",data_type);
+		op_pk_nfd_set(pkptr,"Pk_num",data_pk_num);
+		op_pk_nfd_set(pkptr,"TTL",7);
+		op_pk_nfd_set(pkptr,"Data_Slot_Num",10);
+		op_pk_nfd_set(pkptr,"DEST",dest[i]);
+		//op_pk_nfd_set(pkptr,"Next_hop",interactive_id);
+		//FL CRC
+		
+		op_pk_nfd_set(pkptr,"DEST_MES",pack(route[i][0], slot_appoint_over[i][route[i][0]]));
+		op_pk_nfd_set(pkptr,"Hop1_MES",pack(route[i][1], slot_appoint_over[i][route[i][1]]));
+		op_pk_nfd_set(pkptr,"Hop2_MES",pack(route[i][2], slot_appoint_over[i][route[i][2]]));
+		op_pk_nfd_set(pkptr,"Hop3_MES",pack(route[i][3], slot_appoint_over[i][route[i][3]]));
+		op_pk_nfd_set(pkptr,"Hop4_MES",pack(route[i][4], slot_appoint_over[i][route[i][4]]));
+		
+		//op_pk_print(pkptr);
+		op_pk_send(pkptr,TX_OUT);
+		}
+	}
+else
+	{
+	}
+
+dest_num++;
+if(dest_num>node_num) dest_num=1;
+data_pk_num++;
+if(data_pk_num==16) data_pk_num=0;
+op_intrpt_schedule_self(op_sim_time()+60,SEND_DATA_S_CODE);
